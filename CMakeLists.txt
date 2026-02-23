@@ -4,7 +4,9 @@ project(AmaiGirl LANGUAGES CXX)
 # Ensure minimum macOS version for deployment (downward compatibility)
 if(APPLE)
     # Set globally so compilers encode the correct LC_BUILD_VERSION minOS
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "14.0" CACHE STRING "Minimum macOS version to target" FORCE)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0" CACHE STRING "Minimum macOS version to target" FORCE)
+    # Build a universal binary on macOS (Intel + Apple Silicon)
+    set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "Build architectures for macOS" FORCE)
 endif()
 
 # C++ standard
@@ -22,17 +24,100 @@ find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets OpenGL OpenGLWidgets Netwo
 # Live2D Cubism Core SDK
 set(CUBISM_SDK_DIR "${CMAKE_SOURCE_DIR}/sdk/cubism")
 set(CUBISM_INCLUDE_DIR "${CUBISM_SDK_DIR}/include")
+
+set(CUBISM_LIB_DIR "")
+set(CUBISM_CORE_LIB "")
+set(CUBISM_CORE_LIB_DEBUG "")
+set(CUBISM_CORE_LIB_RELEASE "")
+
 if(APPLE)
-    set(CUBISM_LIB_DIR "${CUBISM_SDK_DIR}/lib/macos/arm64")
-endif ()
+    set(_CUBISM_MACOS_ARM64_LIB "${CUBISM_SDK_DIR}/lib/macos/arm64/libLive2DCubismCore.a")
+    set(_CUBISM_MACOS_X64_LIB "${CUBISM_SDK_DIR}/lib/macos/x86_64/libLive2DCubismCore.a")
+
+    if(CMAKE_OSX_ARCHITECTURES MATCHES "arm64" AND CMAKE_OSX_ARCHITECTURES MATCHES "x86_64")
+        find_program(LIPO_EXECUTABLE lipo)
+        set(CUBISM_LIB_DIR "${CMAKE_BINARY_DIR}/cubism")
+        set(CUBISM_CORE_LIB "${CUBISM_LIB_DIR}/libLive2DCubismCore_universal.a")
+
+        if(NOT LIPO_EXECUTABLE)
+            message(FATAL_ERROR "lipo not found, cannot build universal Cubism library")
+        endif()
+        if(NOT EXISTS "${_CUBISM_MACOS_ARM64_LIB}")
+            message(FATAL_ERROR "Cubism arm64 library not found: ${_CUBISM_MACOS_ARM64_LIB}")
+        endif()
+        if(NOT EXISTS "${_CUBISM_MACOS_X64_LIB}")
+            message(FATAL_ERROR "Cubism x86_64 library not found: ${_CUBISM_MACOS_X64_LIB}")
+        endif()
+
+        add_custom_command(
+            OUTPUT "${CUBISM_CORE_LIB}"
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${CUBISM_LIB_DIR}"
+            COMMAND "${LIPO_EXECUTABLE}" -create
+                    "${_CUBISM_MACOS_ARM64_LIB}"
+                    "${_CUBISM_MACOS_X64_LIB}"
+                    -output "${CUBISM_CORE_LIB}"
+            DEPENDS "${_CUBISM_MACOS_ARM64_LIB}" "${_CUBISM_MACOS_X64_LIB}"
+            COMMENT "Creating universal Cubism Core static library"
+            VERBATIM
+        )
+        add_custom_target(cubism_core_universal DEPENDS "${CUBISM_CORE_LIB}")
+    elseif(CMAKE_OSX_ARCHITECTURES MATCHES "arm64")
+        set(CUBISM_LIB_DIR "${CUBISM_SDK_DIR}/lib/macos/arm64")
+        set(CUBISM_CORE_LIB "${_CUBISM_MACOS_ARM64_LIB}")
+    elseif(CMAKE_OSX_ARCHITECTURES MATCHES "x86_64")
+        set(CUBISM_LIB_DIR "${CUBISM_SDK_DIR}/lib/macos/x86_64")
+        set(CUBISM_CORE_LIB "${_CUBISM_MACOS_X64_LIB}")
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$")
+        set(CUBISM_LIB_DIR "${CUBISM_SDK_DIR}/lib/macos/arm64")
+        set(CUBISM_CORE_LIB "${_CUBISM_MACOS_ARM64_LIB}")
+    else()
+        set(CUBISM_LIB_DIR "${CUBISM_SDK_DIR}/lib/macos/x86_64")
+        set(CUBISM_CORE_LIB "${_CUBISM_MACOS_X64_LIB}")
+    endif()
+elseif(WIN32)
+    # Cubism Windows libs are grouped by MSVC toolset (e.g. 143)
+    set(_CUBISM_WIN_TOOLSET "143")
+    if(DEFINED MSVC_TOOLSET_VERSION AND EXISTS "${CUBISM_SDK_DIR}/lib/windows/x86_64/${MSVC_TOOLSET_VERSION}")
+        set(_CUBISM_WIN_TOOLSET "${MSVC_TOOLSET_VERSION}")
+    endif()
+    set(CUBISM_LIB_DIR "${CUBISM_SDK_DIR}/lib/windows/x86_64/${_CUBISM_WIN_TOOLSET}")
+    set(CUBISM_CORE_LIB_RELEASE "${CUBISM_LIB_DIR}/Live2DCubismCore_MD.lib")
+    set(CUBISM_CORE_LIB_DEBUG "${CUBISM_LIB_DIR}/Live2DCubismCore_MDd.lib")
+elseif(UNIX)
+    set(CUBISM_LIB_DIR "${CUBISM_SDK_DIR}/lib/linux/x86_64")
+    set(CUBISM_CORE_LIB "${CUBISM_LIB_DIR}/libLive2DCubismCore.a")
+endif()
 
 # Import static Cubism Core library
 add_library(Live2DCubismCore STATIC IMPORTED GLOBAL)
-if(APPLE)
+if(WIN32)
+    if(EXISTS "${CUBISM_CORE_LIB_RELEASE}")
+        set_target_properties(Live2DCubismCore PROPERTIES
+            IMPORTED_LOCATION_RELEASE "${CUBISM_CORE_LIB_RELEASE}"
+            INTERFACE_INCLUDE_DIRECTORIES "${CUBISM_INCLUDE_DIR}"
+        )
+        if(EXISTS "${CUBISM_CORE_LIB_DEBUG}")
+            set_target_properties(Live2DCubismCore PROPERTIES
+                IMPORTED_LOCATION_DEBUG "${CUBISM_CORE_LIB_DEBUG}"
+            )
+        else()
+            set_target_properties(Live2DCubismCore PROPERTIES
+                IMPORTED_LOCATION_DEBUG "${CUBISM_CORE_LIB_RELEASE}"
+            )
+        endif()
+    else()
+        message(FATAL_ERROR "Cubism Core library not found for Windows: ${CUBISM_CORE_LIB_RELEASE}")
+    endif()
+elseif(EXISTS "${CUBISM_CORE_LIB}" OR (APPLE AND TARGET cubism_core_universal))
     set_target_properties(Live2DCubismCore PROPERTIES
-        IMPORTED_LOCATION "${CUBISM_LIB_DIR}/libLive2DCubismCore.a"
+        IMPORTED_LOCATION "${CUBISM_CORE_LIB}"
         INTERFACE_INCLUDE_DIRECTORIES "${CUBISM_INCLUDE_DIR}"
     )
+    if(APPLE AND TARGET cubism_core_universal)
+        add_dependencies(Live2DCubismCore cubism_core_universal)
+    endif()
+else()
+    message(FATAL_ERROR "Cubism Core library not found for this platform. Expected in: ${CUBISM_LIB_DIR}")
 endif()
 
 # Sources (reflect new folder layout under src/)
@@ -79,17 +164,38 @@ set(AI_SOURCES
     src/ai/OpenAITtsClient.cpp
 )
 
-add_executable(AmaiGirl MACOSX_BUNDLE
-    ${APP_SOURCES}
-    ${ENGINE_SOURCES}
-    ${UI_SOURCES}
-    ${COMMON_SOURCES}
-    ${AI_SOURCES}
-)
+if(APPLE)
+    add_executable(AmaiGirl MACOSX_BUNDLE
+        ${APP_SOURCES}
+        ${ENGINE_SOURCES}
+        ${UI_SOURCES}
+        ${COMMON_SOURCES}
+        ${AI_SOURCES}
+    )
+elseif(WIN32)
+    add_executable(AmaiGirl WIN32
+        ${APP_SOURCES}
+        ${ENGINE_SOURCES}
+        ${UI_SOURCES}
+        ${COMMON_SOURCES}
+        ${AI_SOURCES}
+    )
+else()
+    add_executable(AmaiGirl
+        ${APP_SOURCES}
+        ${ENGINE_SOURCES}
+        ${UI_SOURCES}
+        ${COMMON_SOURCES}
+        ${AI_SOURCES}
+    )
+endif()
 
 # Also set per-target deployment target as a safeguard
 if(APPLE)
-    set_target_properties(AmaiGirl PROPERTIES MACOSX_DEPLOYMENT_TARGET "14.0")
+    set_target_properties(AmaiGirl PROPERTIES MACOSX_DEPLOYMENT_TARGET "13.0")
+    if(TARGET cubism_core_universal)
+        add_dependencies(AmaiGirl cubism_core_universal)
+    endif()
 endif()
 
 # Include dirs: single root only (Scheme A)

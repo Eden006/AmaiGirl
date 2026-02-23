@@ -8,6 +8,7 @@
 #include <QStandardPaths>
 #include <QLocale>
 #include <QDirIterator>
+#include <QtGlobal>
 
 static bool copyDirectoryRecursively(const QString& srcPath, const QString& dstPath)
 {
@@ -313,10 +314,15 @@ void SettingsManager::bootstrap(const QString& appDir)
     if (models.entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty()) {
         const QString bundledModels = appResourcePath(QStringLiteral("models"));
         const QString legacyModels = QDir(appDir).filePath(QStringLiteral("res/models"));
-        const QString macBundleModels = QDir(appDir).filePath(QStringLiteral("../Resources/models"));
+        QStringList candidateSources;
+        candidateSources << bundledModels;
+#if defined(Q_OS_MACOS)
+        candidateSources << QDir(appDir).filePath(QStringLiteral("../Resources/models"));
+#endif
+        candidateSources << legacyModels;
 
         bool copied = false;
-        for (const QString& src : {bundledModels, macBundleModels, legacyModels}) {
+        for (const QString& src : candidateSources) {
             if (QFileInfo::exists(src) && QFileInfo(src).isDir()) {
                 copied = copyDirectoryRecursively(src, models.absolutePath());
                 if (copied) break;

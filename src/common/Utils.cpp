@@ -41,7 +41,7 @@ QString appResourceRootPath()
 {
     const QString appDir = QCoreApplication::applicationDirPath();
 
-#if defined(Q_OS_MAC)
+#if defined(Q_OS_MACOS)
     const QString bundleRes = QDir::cleanPath(QDir(appDir).filePath("../Resources"));
     if (QFileInfo::exists(bundleRes) && QFileInfo(bundleRes).isDir()) {
         return bundleRes;
@@ -53,7 +53,7 @@ QString appResourceRootPath()
         return localRes;
     }
 
-#if defined(Q_OS_MAC)
+#if defined(Q_OS_MACOS)
     return QDir::cleanPath(QDir(appDir).filePath("../Resources"));
 #else
     return localRes;
