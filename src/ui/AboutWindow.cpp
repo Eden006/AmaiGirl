@@ -60,7 +60,7 @@ AboutWindow::AboutWindow(QWidget *parent) : QMainWindow(parent) {
     copyright->setTextInteractionFlags(Qt::LinksAccessibleByMouse);
     copyright->setOpenExternalLinks(true);
     copyright->setFocusPolicy(Qt::NoFocus);
-#if defined(Q_OS_MAC)
+#if defined(Q_OS_MACOS)
     copyright->setAttribute(Qt::WA_MacShowFocusRect, false);
 #endif
     copyright->setStyleSheet("a, a:focus, a:active { text-decoration: none; outline: none; }");

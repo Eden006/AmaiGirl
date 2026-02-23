@@ -14,7 +14,7 @@
 #include <QWindow>
 #include <QStringList>
 #include "common/SettingsManager.hpp"
-#ifdef Q_OS_MAC
+#ifdef Q_OS_MACOS
 #include <ApplicationServices/ApplicationServices.h>
 #endif
 
@@ -626,35 +626,35 @@ bool Renderer::isOpaqueAtGlobal(const QPoint &globalPos, float alphaThreshold) c
     return false;
 }
 
-#ifdef Q_OS_MAC
+#ifdef Q_OS_MACOS
 static CGEventRef mkMouse(CGEventType type, CGPoint loc, CGMouseButton btn=kCGMouseButtonLeft) {
     return CGEventCreateMouseEvent(nullptr, type, loc, btn);
 }
 #endif
 
 void Renderer::forwardMousePressToSystem(const QPoint &globalPos) {
-#ifdef Q_OS_MAC
+#ifdef Q_OS_MACOS
     CGPoint pt = CGPointMake(globalPos.x(), globalPos.y());
     CGEventRef e1 = mkMouse(kCGEventLeftMouseDown, pt);
     if (e1) { CGEventPost(kCGHIDEventTap, e1); CFRelease(e1); }
 #endif
 }
 void Renderer::forwardMouseMoveToSystem(const QPoint &globalPos) {
-#ifdef Q_OS_MAC
+#ifdef Q_OS_MACOS
     CGPoint pt = CGPointMake(globalPos.x(), globalPos.y());
     CGEventRef e1 = mkMouse(kCGEventMouseMoved, pt);
     if (e1) { CGEventPost(kCGHIDEventTap, e1); CFRelease(e1); }
 #endif
 }
 void Renderer::forwardMouseReleaseToSystem(const QPoint &globalPos) {
-#ifdef Q_OS_MAC
+#ifdef Q_OS_MACOS
     CGPoint pt = CGPointMake(globalPos.x(), globalPos.y());
     CGEventRef e1 = mkMouse(kCGEventLeftMouseUp, pt);
     if (e1) { CGEventPost(kCGHIDEventTap, e1); CFRelease(e1); }
 #endif
 }
 void Renderer::forwardWheelToSystem(const QPoint &globalPos, const QPoint &angleDelta, const QPoint &pixelDelta) {
-#ifdef Q_OS_MAC
+#ifdef Q_OS_MACOS
     CGEventRef ev = CGEventCreateScrollWheelEvent(NULL, kCGScrollEventUnitLine, 2, angleDelta.y()/120, angleDelta.x()/120);
     if (ev) { CGEventPost(kCGHIDEventTap, ev); CFRelease(ev); }
 #endif

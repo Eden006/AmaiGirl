@@ -22,17 +22,60 @@ find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets OpenGL OpenGLWidgets Netwo
 # Live2D Cubism Core SDK
 set(CUBISM_SDK_DIR "${CMAKE_SOURCE_DIR}/sdk/cubism")
 set(CUBISM_INCLUDE_DIR "${CUBISM_SDK_DIR}/include")
+
+set(CUBISM_LIB_DIR "")
+set(CUBISM_CORE_LIB "")
+set(CUBISM_CORE_LIB_DEBUG "")
+set(CUBISM_CORE_LIB_RELEASE "")
+
 if(APPLE)
-    set(CUBISM_LIB_DIR "${CUBISM_SDK_DIR}/lib/macos/arm64")
-endif ()
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$")
+        set(CUBISM_LIB_DIR "${CUBISM_SDK_DIR}/lib/macos/arm64")
+    else()
+        set(CUBISM_LIB_DIR "${CUBISM_SDK_DIR}/lib/macos/x86_64")
+    endif()
+    set(CUBISM_CORE_LIB "${CUBISM_LIB_DIR}/libLive2DCubismCore.a")
+elseif(WIN32)
+    # Cubism Windows libs are grouped by MSVC toolset (e.g. 143)
+    set(_CUBISM_WIN_TOOLSET "143")
+    if(DEFINED MSVC_TOOLSET_VERSION AND EXISTS "${CUBISM_SDK_DIR}/lib/windows/x86_64/${MSVC_TOOLSET_VERSION}")
+        set(_CUBISM_WIN_TOOLSET "${MSVC_TOOLSET_VERSION}")
+    endif()
+    set(CUBISM_LIB_DIR "${CUBISM_SDK_DIR}/lib/windows/x86_64/${_CUBISM_WIN_TOOLSET}")
+    set(CUBISM_CORE_LIB_RELEASE "${CUBISM_LIB_DIR}/Live2DCubismCore_MD.lib")
+    set(CUBISM_CORE_LIB_DEBUG "${CUBISM_LIB_DIR}/Live2DCubismCore_MDd.lib")
+elseif(UNIX)
+    set(CUBISM_LIB_DIR "${CUBISM_SDK_DIR}/lib/linux/x86_64")
+    set(CUBISM_CORE_LIB "${CUBISM_LIB_DIR}/libLive2DCubismCore.a")
+endif()
 
 # Import static Cubism Core library
 add_library(Live2DCubismCore STATIC IMPORTED GLOBAL)
-if(APPLE)
+if(WIN32)
+    if(EXISTS "${CUBISM_CORE_LIB_RELEASE}")
+        set_target_properties(Live2DCubismCore PROPERTIES
+            IMPORTED_LOCATION_RELEASE "${CUBISM_CORE_LIB_RELEASE}"
+            INTERFACE_INCLUDE_DIRECTORIES "${CUBISM_INCLUDE_DIR}"
+        )
+        if(EXISTS "${CUBISM_CORE_LIB_DEBUG}")
+            set_target_properties(Live2DCubismCore PROPERTIES
+                IMPORTED_LOCATION_DEBUG "${CUBISM_CORE_LIB_DEBUG}"
+            )
+        else()
+            set_target_properties(Live2DCubismCore PROPERTIES
+                IMPORTED_LOCATION_DEBUG "${CUBISM_CORE_LIB_RELEASE}"
+            )
+        endif()
+    else()
+        message(FATAL_ERROR "Cubism Core library not found for Windows: ${CUBISM_CORE_LIB_RELEASE}")
+    endif()
+elseif(EXISTS "${CUBISM_CORE_LIB}")
     set_target_properties(Live2DCubismCore PROPERTIES
-        IMPORTED_LOCATION "${CUBISM_LIB_DIR}/libLive2DCubismCore.a"
+        IMPORTED_LOCATION "${CUBISM_CORE_LIB}"
         INTERFACE_INCLUDE_DIRECTORIES "${CUBISM_INCLUDE_DIR}"
     )
+else()
+    message(FATAL_ERROR "Cubism Core library not found for this platform. Expected in: ${CUBISM_LIB_DIR}")
 endif()
 
 # Sources (reflect new folder layout under src/)
@@ -79,13 +122,31 @@ set(AI_SOURCES
     src/ai/OpenAITtsClient.cpp
 )
 
-add_executable(AmaiGirl MACOSX_BUNDLE
-    ${APP_SOURCES}
-    ${ENGINE_SOURCES}
-    ${UI_SOURCES}
-    ${COMMON_SOURCES}
-    ${AI_SOURCES}
-)
+if(APPLE)
+    add_executable(AmaiGirl MACOSX_BUNDLE
+        ${APP_SOURCES}
+        ${ENGINE_SOURCES}
+        ${UI_SOURCES}
+        ${COMMON_SOURCES}
+        ${AI_SOURCES}
+    )
+elseif(WIN32)
+    add_executable(AmaiGirl WIN32
+        ${APP_SOURCES}
+        ${ENGINE_SOURCES}
+        ${UI_SOURCES}
+        ${COMMON_SOURCES}
+        ${AI_SOURCES}
+    )
+else()
+    add_executable(AmaiGirl
+        ${APP_SOURCES}
+        ${ENGINE_SOURCES}
+        ${UI_SOURCES}
+        ${COMMON_SOURCES}
+        ${AI_SOURCES}
+    )
+endif()
 
 # Also set per-target deployment target as a safeguard
 if(APPLE)
