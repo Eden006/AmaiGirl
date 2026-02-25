@@ -24,7 +24,10 @@ AmaiGirl aims to become a cross-platform AI desktop assistant. The current imple
 
 #### Linux
 
-- TBD
+- Recommended environment: Wayland session (X11 can be used as fallback backend)
+- Build tools: CMake + Ninja + GCC/Clang
+- Qt: Qt 6 (Core / Gui / Widgets / OpenGL / OpenGLWidgets / Network / Multimedia)
+- Optional packaging tools (AppImage): `linuxdeploy`, `appimagetool`
 
 ### 2. **Live2D SDK (Important, must be downloaded manually)**
 
@@ -84,7 +87,35 @@ cmake --build build-release -j
 
 #### Linux
 
-- TBD
+- Standard build:
+
+```bash
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+./build/AmaiGirl
+```
+
+- AppImage packaging:
+
+```bash
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build --target package_appimage -j
+./build/AmaiGirl-x86_64.AppImage
+```
+
+- Portable/CI recommendation: avoid machine-specific paths; use `PATH` discovery first. If needed, override via CMake variables:
+   - `AMAIGIRL_LINUXDEPLOY_EXECUTABLE`
+   - `AMAIGIRL_APPIMAGETOOL_EXECUTABLE`
+   - `AMAIGIRL_QMAKE_EXECUTABLE`
+
+Example:
+
+```bash
+cmake -S . -B build -G Ninja \
+   -DAMAIGIRL_LINUXDEPLOY_EXECUTABLE=/opt/tools/linuxdeploy-x86_64.AppImage \
+   -DAMAIGIRL_APPIMAGETOOL_EXECUTABLE=/opt/tools/appimagetool-x86_64.AppImage \
+   -DAMAIGIRL_QMAKE_EXECUTABLE=/opt/Qt/6.9.3/gcc_64/bin/qmake6
+```
 
 ### 4. Coding & Commit Guidelines
 

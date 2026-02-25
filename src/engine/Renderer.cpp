@@ -13,6 +13,8 @@
 #include <QTextStream>
 #include <QWindow>
 #include <QStringList>
+#include <QApplication>
+#include <QGuiApplication>
 #include "common/SettingsManager.hpp"
 #ifdef Q_OS_MACOS
 #include <ApplicationServices/ApplicationServices.h>
@@ -637,6 +639,8 @@ void Renderer::forwardMousePressToSystem(const QPoint &globalPos) {
     CGPoint pt = CGPointMake(globalPos.x(), globalPos.y());
     CGEventRef e1 = mkMouse(kCGEventLeftMouseDown, pt);
     if (e1) { CGEventPost(kCGHIDEventTap, e1); CFRelease(e1); }
+#else
+    Q_UNUSED(globalPos);
 #endif
 }
 void Renderer::forwardMouseMoveToSystem(const QPoint &globalPos) {
@@ -644,6 +648,8 @@ void Renderer::forwardMouseMoveToSystem(const QPoint &globalPos) {
     CGPoint pt = CGPointMake(globalPos.x(), globalPos.y());
     CGEventRef e1 = mkMouse(kCGEventMouseMoved, pt);
     if (e1) { CGEventPost(kCGHIDEventTap, e1); CFRelease(e1); }
+#else
+    Q_UNUSED(globalPos);
 #endif
 }
 void Renderer::forwardMouseReleaseToSystem(const QPoint &globalPos) {
@@ -651,12 +657,18 @@ void Renderer::forwardMouseReleaseToSystem(const QPoint &globalPos) {
     CGPoint pt = CGPointMake(globalPos.x(), globalPos.y());
     CGEventRef e1 = mkMouse(kCGEventLeftMouseUp, pt);
     if (e1) { CGEventPost(kCGHIDEventTap, e1); CFRelease(e1); }
+#else
+    Q_UNUSED(globalPos);
 #endif
 }
 void Renderer::forwardWheelToSystem(const QPoint &globalPos, const QPoint &angleDelta, const QPoint &pixelDelta) {
 #ifdef Q_OS_MACOS
     CGEventRef ev = CGEventCreateScrollWheelEvent(NULL, kCGScrollEventUnitLine, 2, angleDelta.y()/120, angleDelta.x()/120);
     if (ev) { CGEventPost(kCGHIDEventTap, ev); CFRelease(ev); }
+#else
+    Q_UNUSED(globalPos);
+    Q_UNUSED(angleDelta);
+    Q_UNUSED(pixelDelta);
 #endif
 }
 
@@ -664,22 +676,47 @@ void Renderer::mousePressEvent(QMouseEvent *e) {
     if (e->button() == Qt::LeftButton) {
         m_lastGlobalPos = e->globalPosition().toPoint();
         bool opaque = isOpaqueAtGlobal(m_lastGlobalPos);
-        m_passthroughActive = !opaque; // transparent -> forward to OS
+        bool canSystemPassthrough = false;
+#if defined(Q_OS_MACOS)
+        canSystemPassthrough = true;
+#endif
+        m_passthroughActive = (!opaque && canSystemPassthrough); // transparent -> forward to OS
         m_forceMouseOpaqueDuringDrag = opaque;
         if (m_passthroughActive) {
             forwardMousePressToSystem(m_lastGlobalPos);
             e->ignore();
             return;
         }
+
+#if defined(Q_OS_LINUX)
+        if (opaque && QGuiApplication::platformName().startsWith(QStringLiteral("wayland"))) {
+            if (auto* topLevel = window()) {
+                if (auto* wh = topLevel->windowHandle()) {
+                    m_forceMouseOpaqueDuringDrag = false;
+                    wh->startSystemMove();
+                    e->accept();
+                    return;
+                }
+            }
+        }
+#endif
     }
 }
 
 void Renderer::mouseMoveEvent(QMouseEvent *e) {
     if (m_passthroughActive) {
+        forwardMouseMoveToSystem(e->globalPosition().toPoint());
         e->ignore();
         return;
     }
     if (e->buttons() & Qt::LeftButton) {
+#if defined(Q_OS_LINUX)
+        if (QGuiApplication::platformName().startsWith(QStringLiteral("wayland"))) {
+            e->accept();
+            updateMouseTransparent();
+            return;
+        }
+#endif
         auto* w = window();
         QPoint current = e->globalPosition().toPoint();
         QPoint delta = current - m_lastGlobalPos;
@@ -701,7 +738,11 @@ void Renderer::mouseReleaseEvent(QMouseEvent *e) {
 }
 
 void Renderer::wheelEvent(QWheelEvent *e) {
-    if (m_passthroughActive) { e->ignore(); return; }
+    if (m_passthroughActive) {
+        forwardWheelToSystem(e->globalPosition().toPoint(), e->angleDelta(), e->pixelDelta());
+        e->ignore();
+        return;
+    }
     // Resize window with wheel to adjust size; fit mapping keeps model fully visible
     auto* tl = window();
     QSize cur = tl->size();
@@ -723,7 +764,8 @@ void Renderer::scheduleMaskUpdate() {
 }
 
 void Renderer::updateMouseTransparent() {
-    if (m_forceMouseOpaqueDuringDrag) {
+    // 暂停穿透：有弹出菜单/模态窗口时避免影响点击
+    if (QApplication::activePopupWidget() || QApplication::activeModalWidget()) {
         setAttribute(Qt::WA_TransparentForMouseEvents, false);
         if (auto* w = window()) {
             if (auto* wh = w->windowHandle()) {
@@ -732,14 +774,48 @@ void Renderer::updateMouseTransparent() {
         }
         return;
     }
+
+#if defined(Q_OS_LINUX)
+    if (QGuiApplication::platformName().startsWith(QStringLiteral("wayland"))) {
+        const QByteArray passthroughEnv = qgetenv("AMAIGIRL_WAYLAND_PASSTHROUGH").trimmed().toLower();
+        const bool enableWaylandPassthrough =
+            (passthroughEnv == QByteArrayLiteral("1") ||
+             passthroughEnv == QByteArrayLiteral("true") ||
+             passthroughEnv == QByteArrayLiteral("yes") ||
+             passthroughEnv == QByteArrayLiteral("on"));
+        if (!enableWaylandPassthrough) {
+            setAttribute(Qt::WA_TransparentForMouseEvents, false);
+            if (auto* w = window()) {
+                if (auto* wh = w->windowHandle()) {
+                    wh->setFlag(Qt::WindowTransparentForInput, false);
+                }
+            }
+            return;
+        }
+    }
+#endif
+
+    if (m_forceMouseOpaqueDuringDrag) {
+        setAttribute(Qt::WA_TransparentForMouseEvents, false);
+#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
+        if (auto* w = window()) {
+            if (auto* wh = w->windowHandle()) {
+                wh->setFlag(Qt::WindowTransparentForInput, false);
+            }
+        }
+#endif
+        return;
+    }
     QPoint g = QCursor::pos();
     bool opaque = isOpaqueAtGlobal(g);
     // 1) 确保顶层窗口在透明区域真正穿透
+#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
     if (auto* w = window()) {
         if (auto* wh = w->windowHandle()) {
             wh->setFlag(Qt::WindowTransparentForInput, !opaque);
         }
     }
+#endif
     // 2) 作为补充，也让当前小部件在透明区域不吃事件
     setAttribute(Qt::WA_TransparentForMouseEvents, !opaque);
 }
@@ -1087,7 +1163,7 @@ void Renderer::applyBreath(double dt, float* params, const float* minVals, const
     auto sinPhase = [&](float period, float phase)->float{
         if (period <= 0.0001f) return 0.0f;
         float t = std::fmod((float)m_breathTimer, period) / period; // [0,1)
-        return std::sinf((t * 2.0f * (float)M_PI) + phase); // [-1,1]
+        return std::sin((t * 2.0f * (float)M_PI) + phase); // [-1,1]
     };
 
     // 调低头部相关幅度，让自动呼吸更柔和

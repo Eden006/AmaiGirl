@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=AmaiGirl
+GenericName=AI Desktop Assistant
+Comment=Cross-platform AI desktop assistant with Live2D
+Exec=AmaiGirl
+Icon=amaigirl
+Terminal=false
+Categories=Utility;AudioVideo;
+StartupNotify=true
