@@ -815,7 +815,7 @@ bool SettingsWindow::event(QEvent* e)
                 const int idxSystem = d->languageCombo->findData(QStringLiteral("system"));
                 if (idxSystem >= 0) d->languageCombo->setItemText(idxSystem, tr("跟随系统"));
                 const int idxZh = d->languageCombo->findData(QStringLiteral("zh_CN"));
-                if (idxZh >= 0) d->languageCombo->setItemText(idxZh, tr("中文"));
+                if (idxZh >= 0) d->languageCombo->setItemText(idxZh, tr("简体中文"));
             }
 
             if (d->basicForm) {
