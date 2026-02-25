@@ -2,10 +2,10 @@
   <img src="docs/app-icon.png" alt="AmaiGirl" width="120" />
   <h1>AmaiGirl</h1>
   <p><a href="README.md#zh-cn">简体中文</a> | <a href="README.en.md#en-us">English</a></p>
-  <p><strong>An AI desktop assistant with a cross-platform vision</strong> · Compatible with OpenAI-format API calls · Currently implemented on macOS 13.0+</p>
+  <p><strong>An AI desktop assistant with a cross-platform vision</strong> · Compatible with OpenAI-format API calls · Currently available on macOS 13.0+ and Linux (Wayland)</p>
   <p>
     <img src="docs/badges/goal-cross-platform.svg" alt="Goal" />
-    <img src="docs/badges/platform-macos.svg" alt="Platform" />
+    <img src="docs/badges/platform-macos-linux.svg" alt="Platform" />
     <img src="docs/badges/license-apache2.svg" alt="License" />
   </p>
 </div>
@@ -19,20 +19,21 @@
 AmaiGirl is an AI desktop assistant project built around three core values: **companionship, extensibility, and always-on desktop experience**.  
 It is more than a chat window — it aims to become a desktop companion that can talk, interact, and evolve continuously in your workflow.
 
-The current version provides a usable closed loop on macOS 13.0+, and will continue expanding to more platforms.
+The current version provides a usable baseline on macOS 13.0+ and Linux (Wayland), and will continue expanding to more platforms.
 
 ## Positioning
 
 - **Goal**: Build a cross-platform AI desktop assistant
-- **Current Status**: Runnable on macOS 13.0+
+- **Current Status**: Runnable on macOS 13.0+ and Linux (Wayland)
 - **Technical Direction**: Desktop resident app + Live2D character interaction + LLM chat + TTS playback
 
 ## Demo
 
 > Models shown in this demo are from bilibili creator [@菜菜爱吃饭ovo](https://space.bilibili.com/1851126283), non-commercial only, and are not included in this source repository or release app. Desktop wallpapers shown in demos are from the internet; please contact the maintainer if any infringement is involved.
 
-- [x] Main UI demo
+- [x] Main UI demo (macOS + Linux)
   ![screenshot1](docs/screenshot1.png)
+  ![screenshot1.1](docs/screenshot1.1.png)
 - [x] Chat demo
   ![screenshot2](docs/screenshot2.png)
 - [x] Settings demo
@@ -98,8 +99,31 @@ After configuration, AI replies can trigger voice playback. If playback fails, t
 
 ### 5. Resources & paths
 
-- The app uses standard macOS bundle resource path after packaging: `Contents/Resources/...`
+- macOS packaged resource path: `Contents/Resources/...`
+- Linux build/install resource path: `<executable_dir>/res` or `../share/AmaiGirl/res`
 - License files are available under the `licenses` directory
+
+### 6. Linux run & packaging notes
+
+- Current Linux path is **Wayland-first**; if Wayland is unavailable, the app warns and falls back to an available Qt backend.
+- To enable experimental transparent-area input passthrough on Wayland:
+  `AMAIGIRL_WAYLAND_PASSTHROUGH=1 ./AmaiGirl`
+
+AppImage packaging example (`package_appimage` target):
+
+```bash
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build --target package_appimage -j
+./build/AmaiGirl-x86_64.AppImage
+```
+
+Portable build recommendation (avoid machine-specific paths):
+
+- By default, tools are discovered from system `PATH` (`linuxdeploy`, `appimagetool`, `qmake`)
+- You can override tool locations explicitly (recommended in CI/containers):
+  - `AMAIGIRL_LINUXDEPLOY_EXECUTABLE`
+  - `AMAIGIRL_APPIMAGETOOL_EXECUTABLE`
+  - `AMAIGIRL_QMAKE_EXECUTABLE`
 
 ## Development
 
@@ -118,7 +142,7 @@ It includes environment requirements, build methods, contribution workflow, codi
 ## Roadmap
 
 - [ ] Windows support
-- [ ] Linux support
+- [x] Basic Linux (Wayland) support
 - [ ] LLM long-term memory
 - [ ] Better character motion/expression quality (including VTube Studio model expression attempts)
 - [ ] STT support (speech-to-text input)

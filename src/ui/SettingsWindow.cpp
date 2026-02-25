@@ -34,6 +34,7 @@
 #include <QLineEdit>
 #include <QPlainTextEdit>
 #include <QLocale>
+#include <QtGlobal>
 
 #include <QGuiApplication>
 #include <QScreen>
@@ -651,8 +652,31 @@ SettingsWindow::SettingsWindow(QWidget *parent) : QMainWindow(parent), d(new Imp
         emit watermarkChanged(wm);
     });
 
-    connect(d->chooseBtn, &QPushButton::clicked, this, [this]{
-        QString dir = QFileDialog::getExistingDirectory(this, tr("选择模型根目录"), SettingsManager::instance().modelsRoot());
+    auto chooseExistingDirectory = [this](const QString& title, const QString& startDir) -> QString {
+        QFileDialog dlg(this, title, startDir);
+        dlg.setFileMode(QFileDialog::Directory);
+        dlg.setOption(QFileDialog::ShowDirsOnly, true);
+#if defined(Q_OS_LINUX)
+        dlg.setOption(QFileDialog::DontUseNativeDialog, true);
+#endif
+        if (dlg.exec() != QDialog::Accepted) return {};
+        const QStringList files = dlg.selectedFiles();
+        return files.isEmpty() ? QString() : files.first();
+    };
+
+    auto chooseOpenFile = [this](const QString& title, const QString& startDir, const QString& filter) -> QString {
+        QFileDialog dlg(this, title, startDir, filter);
+        dlg.setFileMode(QFileDialog::ExistingFile);
+#if defined(Q_OS_LINUX)
+        dlg.setOption(QFileDialog::DontUseNativeDialog, true);
+#endif
+        if (dlg.exec() != QDialog::Accepted) return {};
+        const QStringList files = dlg.selectedFiles();
+        return files.isEmpty() ? QString() : files.first();
+    };
+
+    connect(d->chooseBtn, &QPushButton::clicked, this, [this, chooseExistingDirectory]{
+        QString dir = chooseExistingDirectory(tr("选择模型根目录"), SettingsManager::instance().modelsRoot());
         if (dir.isEmpty()) return; SettingsManager::instance().setModelsRoot(dir); d->pathLabel->setText(dir); refreshModelList();
     });
     connect(d->openBtn, &QPushButton::clicked, this, [this]{ QDesktopServices::openUrl(QUrl::fromLocalFile(SettingsManager::instance().modelsRoot())); });
@@ -679,7 +703,7 @@ SettingsWindow::SettingsWindow(QWidget *parent) : QMainWindow(parent), d(new Imp
     connect(d->chkGaze, &QCheckBox::toggled, this, [this](bool on){ SettingsManager::instance().setEnableGaze(on); emit toggleGaze(on); });
     connect(d->chkPhysics, &QCheckBox::toggled, this, [this](bool on){ SettingsManager::instance().setEnablePhysics(on); emit togglePhysics(on); });
 
-    connect(d->wmChooseBtn, &QPushButton::clicked, this, [this]{ QString folder = SettingsManager::instance().selectedModelFolder(); if (folder.isEmpty()) return; QString root = SettingsManager::instance().modelsRoot(); QString modelDir = QDir(root).filePath(folder); QString path = QFileDialog::getOpenFileName(this, tr("选择水印表达式文件"), modelDir, "Expression (*.exp3.json)"); if (path.isEmpty()) return; SettingsManager::instance().setWatermarkExpPath(path); d->wmFileLabel->setText(QFileInfo(path).fileName()); emit watermarkChanged(path); });
+    connect(d->wmChooseBtn, &QPushButton::clicked, this, [this, chooseOpenFile]{ QString folder = SettingsManager::instance().selectedModelFolder(); if (folder.isEmpty()) return; QString root = SettingsManager::instance().modelsRoot(); QString modelDir = QDir(root).filePath(folder); QString path = chooseOpenFile(tr("选择水印表达式文件"), modelDir, "Expression (*.exp3.json)"); if (path.isEmpty()) return; SettingsManager::instance().setWatermarkExpPath(path); d->wmFileLabel->setText(QFileInfo(path).fileName()); emit watermarkChanged(path); });
     connect(d->wmClearBtn, &QPushButton::clicked, this, [this]{ SettingsManager::instance().setWatermarkExpPath(""); d->wmFileLabel->setText(tr("无")); emit watermarkChanged(""); });
 
     connect(d->modelCombo, &QComboBox::currentTextChanged, this, [this](const QString&){ auto& sm = SettingsManager::instance(); int curCap = sm.textureMaxDim(); int idxCap = d->texCapCombo->findText(QString::number(curCap)); if (idxCap>=0) d->texCapCombo->setCurrentIndex(idxCap); int curMsaa = sm.msaaSamples(); int idxMsaa = (curMsaa==2?0:(curMsaa==8?2:1)); d->msaaCombo->setCurrentIndex(idxMsaa); });
@@ -791,7 +815,7 @@ bool SettingsWindow::event(QEvent* e)
                 const int idxSystem = d->languageCombo->findData(QStringLiteral("system"));
                 if (idxSystem >= 0) d->languageCombo->setItemText(idxSystem, tr("跟随系统"));
                 const int idxZh = d->languageCombo->findData(QStringLiteral("zh_CN"));
-                if (idxZh >= 0) d->languageCombo->setItemText(idxZh, tr("中文"));
+                if (idxZh >= 0) d->languageCombo->setItemText(idxZh, tr("简体中文"));
             }
 
             if (d->basicForm) {

@@ -24,7 +24,10 @@
 
 #### Linux
 
-- TBD
+- 建议环境：Wayland 会话（X11 可作为回退后端）
+- 构建工具：CMake + Ninja + GCC/Clang
+- Qt：Qt 6（Core / Gui / Widgets / OpenGL / OpenGLWidgets / Network / Multimedia）
+- 可选打包工具（AppImage）：`linuxdeploy`、`appimagetool`
 
 ### 2. **Live2D SDK（重要，必须自行下载）**
 
@@ -84,7 +87,35 @@ cmake --build build-release -j
 
 #### Linux
 
-- TBD
+- 常规构建：
+
+```bash
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+./build/AmaiGirl
+```
+
+- AppImage 打包：
+
+```bash
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build --target package_appimage -j
+./build/AmaiGirl-x86_64.AppImage
+```
+
+- 跨环境/CI 推荐：避免写死本地路径，优先通过 `PATH` 找工具；必要时使用以下 CMake 变量覆盖：
+   - `AMAIGIRL_LINUXDEPLOY_EXECUTABLE`
+   - `AMAIGIRL_APPIMAGETOOL_EXECUTABLE`
+   - `AMAIGIRL_QMAKE_EXECUTABLE`
+
+示例：
+
+```bash
+cmake -S . -B build -G Ninja \
+   -DAMAIGIRL_LINUXDEPLOY_EXECUTABLE=/opt/tools/linuxdeploy-x86_64.AppImage \
+   -DAMAIGIRL_APPIMAGETOOL_EXECUTABLE=/opt/tools/appimagetool-x86_64.AppImage \
+   -DAMAIGIRL_QMAKE_EXECUTABLE=/opt/Qt/6.9.3/gcc_64/bin/qmake6
+```
 
 ### 4. 代码与提交规范
 

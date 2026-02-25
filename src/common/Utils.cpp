@@ -48,6 +48,27 @@ QString appResourceRootPath()
     }
 #endif
 
+#if defined(Q_OS_LINUX)
+    const QByteArray appDirEnv = qgetenv("APPDIR");
+    if (!appDirEnv.isEmpty()) {
+        const QString appImageRoot = QString::fromLocal8Bit(appDirEnv);
+        const QString appImageBinRes = QDir::cleanPath(QDir(appImageRoot).filePath("usr/bin/res"));
+        if (QFileInfo::exists(appImageBinRes) && QFileInfo(appImageBinRes).isDir()) {
+            return appImageBinRes;
+        }
+
+        const QString appImageShareRes = QDir::cleanPath(QDir(appImageRoot).filePath("usr/share/AmaiGirl/res"));
+        if (QFileInfo::exists(appImageShareRes) && QFileInfo(appImageShareRes).isDir()) {
+            return appImageShareRes;
+        }
+    }
+
+    const QString installShareRes = QDir::cleanPath(QDir(appDir).filePath("../share/AmaiGirl/res"));
+    if (QFileInfo::exists(installShareRes) && QFileInfo(installShareRes).isDir()) {
+        return installShareRes;
+    }
+#endif
+
     const QString localRes = QDir::cleanPath(QDir(appDir).filePath("res"));
     if (QFileInfo::exists(localRes) && QFileInfo(localRes).isDir()) {
         return localRes;
