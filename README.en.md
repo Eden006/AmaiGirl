@@ -6,8 +6,7 @@
   <p>
     <a href="https://github.com/IAIAYN/AmaiGirl/releases"><img src="https://img.shields.io/github/v/release/IAIAYN/AmaiGirl?display_name=tag" alt="Release" /></a>
     <a href="https://github.com/IAIAYN/AmaiGirl/blob/main/LICENSE"><img src="https://img.shields.io/github/license/IAIAYN/AmaiGirl" alt="License" /></a>
-    <a href="https://github.com/IAIAYN/AmaiGirl/actions/workflows/super-linter.yml"><img src="https://img.shields.io/github/actions/workflow/status/IAIAYN/AmaiGirl/super-linter.yml?branch=main&label=lint-main" alt="Lint Main" /></a>
-    <a href="https://github.com/IAIAYN/AmaiGirl/actions/workflows/super-linter.yml"><img src="https://img.shields.io/github/actions/workflow/status/IAIAYN/AmaiGirl/super-linter.yml?branch=dev&label=lint-dev" alt="Lint Dev" /></a>
+    <a href="https://github.com/IAIAYN/AmaiGirl/actions/workflows/super-linter.yml"><img src="https://github.com/IAIAYN/AmaiGirl/actions/workflows/super-linter.yml/badge.svg" alt="Lint" /></a>
   </p>
 </div>
 
