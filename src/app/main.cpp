@@ -28,6 +28,38 @@
 #include <QWindow>
 #include <QShortcut>
 #include <QTranslator>
+#include <QtGlobal>
+
+static bool isLinuxWayland()
+{
+#if defined(Q_OS_LINUX)
+    return QGuiApplication::platformName().startsWith(QStringLiteral("wayland"));
+#else
+    return false;
+#endif
+}
+
+static void cacheWindowGeometry(QWidget* w)
+{
+#if defined(Q_OS_LINUX)
+    if (!w) return;
+    w->setProperty("amaigirl_cached_geometry", w->geometry());
+#else
+    Q_UNUSED(w);
+#endif
+}
+
+static void restoreWindowGeometry(QWidget* w)
+{
+#if defined(Q_OS_LINUX)
+    if (!w) return;
+    const QRect cached = w->property("amaigirl_cached_geometry").toRect();
+    if (!cached.isValid()) return;
+    w->setGeometry(cached);
+#else
+    Q_UNUSED(w);
+#endif
+}
 
 // Helper to center/reset window
 static void centerAndSize(QMainWindow& win) {
@@ -50,6 +82,12 @@ static void bringToFrontOnce(QWidget* w) {
     w->raise();
     w->activateWindow();
     if (auto *wh = w->windowHandle()) wh->requestActivate();
+
+#if defined(Q_OS_LINUX)
+    if (isLinuxWayland()) {
+        return;
+    }
+#endif
 
     // If already active, don't touch flags to avoid flicker
     QTimer::singleShot(50, w, [w]{
@@ -181,6 +219,13 @@ static bool loadAppTranslator(QApplication& app, QTranslator& translator, const 
 }
 
 int main(int argc, char *argv[]) {
+#if defined(Q_OS_LINUX)
+    const QByteArray qpaEnv = qgetenv("QT_QPA_PLATFORM");
+    if (qpaEnv.isEmpty()) {
+        qputenv("QT_QPA_PLATFORM", QByteArrayLiteral("wayland;xcb"));
+    }
+#endif
+
     QSurfaceFormat fmt;
     fmt.setDepthBufferSize(0);
     fmt.setStencilBufferSize(8);
@@ -188,6 +233,17 @@ int main(int argc, char *argv[]) {
     QSurfaceFormat::setDefaultFormat(fmt);
 
     QApplication app(argc, argv);
+#if defined(Q_OS_LINUX)
+    if (!isLinuxWayland()) {
+        QMessageBox::warning(
+            nullptr,
+            QStringLiteral("AmaiGirl"),
+            QStringLiteral("AmaiGirl on Linux currently supports Wayland only.\n"
+                           "Current Qt platform plugin: %1\n\n"
+                           "The app will continue to run with current backend.")
+                .arg(QGuiApplication::platformName()));
+    }
+#endif
     QCoreApplication::setApplicationName(QStringLiteral("AmaiGirl"));
     QApplication::setApplicationDisplayName(QStringLiteral("AmaiGirl"));
     QCoreApplication::setOrganizationName(QStringLiteral("IAIAYN"));
@@ -266,6 +322,12 @@ int main(int argc, char *argv[]) {
     }
 
     win.show();
+#if defined(Q_OS_LINUX)
+    cacheWindowGeometry(&win);
+    if (auto* wh = win.windowHandle()) {
+        wh->setFlag(Qt::WindowStaysOnTopHint, true);
+    }
+#endif
 
     const QString resRoot = appResourceRootPath();
 
@@ -319,6 +381,9 @@ int main(int argc, char *argv[]) {
     auto toggleChat = [chatWnd]{
         static bool s_firstShow = true;
         if (chatWnd->isVisible()) {
+#if defined(Q_OS_LINUX)
+            cacheWindowGeometry(chatWnd);
+#endif
             chatWnd->hide();
         } else {
             if (s_firstShow) {
@@ -326,7 +391,14 @@ int main(int argc, char *argv[]) {
                 centerOnCurrentScreen(chatWnd);
                 s_firstShow = false;
             }
+#if defined(Q_OS_LINUX)
+            restoreWindowGeometry(chatWnd);
+#endif
             bringToFrontOnce(chatWnd);
+#if defined(Q_OS_LINUX)
+            QTimer::singleShot(0, chatWnd, [chatWnd]{ restoreWindowGeometry(chatWnd); });
+            cacheWindowGeometry(chatWnd);
+#endif
         }
     };
 
@@ -344,12 +416,25 @@ int main(int argc, char *argv[]) {
     toggleShortcut->setContext(Qt::ApplicationShortcut);
     QObject::connect(toggleShortcut, &QShortcut::activated, &app, [winPtr=&win, toggleAction]{
         if (winPtr->isVisible()) {
+#if defined(Q_OS_LINUX)
+            cacheWindowGeometry(winPtr);
+#endif
             winPtr->hide();
             toggleAction->setText(QStringLiteral("显示"));
         } else {
+#if defined(Q_OS_LINUX)
+            restoreWindowGeometry(winPtr);
+#endif
             winPtr->show();
             winPtr->raise();
             winPtr->activateWindow();
+#if defined(Q_OS_LINUX)
+            if (auto* wh = winPtr->windowHandle()) {
+                wh->setFlag(Qt::WindowStaysOnTopHint, true);
+            }
+            QTimer::singleShot(0, winPtr, [winPtr]{ restoreWindowGeometry(winPtr); });
+            cacheWindowGeometry(winPtr);
+#endif
             toggleAction->setText(QStringLiteral("隐藏"));
         }
     });
@@ -358,9 +443,19 @@ int main(int argc, char *argv[]) {
     settingsShortcut->setContext(Qt::ApplicationShortcut);
     QObject::connect(settingsShortcut, &QShortcut::activated, &app, [settingsWnd]{
         if (settingsWnd->isVisible()) {
+#if defined(Q_OS_LINUX)
+            cacheWindowGeometry(settingsWnd);
+#endif
             settingsWnd->hide();
         } else {
+#if defined(Q_OS_LINUX)
+            restoreWindowGeometry(settingsWnd);
+#endif
             bringToFrontOnce(settingsWnd);
+#if defined(Q_OS_LINUX)
+            QTimer::singleShot(0, settingsWnd, [settingsWnd]{ restoreWindowGeometry(settingsWnd); });
+            cacheWindowGeometry(settingsWnd);
+#endif
         }
     });
 
@@ -402,9 +497,19 @@ int main(int argc, char *argv[]) {
 
     QObject::connect(settingsAction, &QAction::triggered, [settingsWnd]{
         if (settingsWnd->isVisible()) {
+#if defined(Q_OS_LINUX)
+            cacheWindowGeometry(settingsWnd);
+#endif
             settingsWnd->hide();
         } else {
+#if defined(Q_OS_LINUX)
+            restoreWindowGeometry(settingsWnd);
+#endif
             bringToFrontOnce(settingsWnd);
+#if defined(Q_OS_LINUX)
+            QTimer::singleShot(0, settingsWnd, [settingsWnd]{ restoreWindowGeometry(settingsWnd); });
+            cacheWindowGeometry(settingsWnd);
+#endif
         }
     });
 
@@ -412,20 +517,43 @@ int main(int argc, char *argv[]) {
 
     QObject::connect(aboutAction, &QAction::triggered, [aboutWnd]{
         if (aboutWnd->isVisible()) {
+#if defined(Q_OS_LINUX)
+            cacheWindowGeometry(aboutWnd);
+#endif
             aboutWnd->hide();
         } else {
+#if defined(Q_OS_LINUX)
+            restoreWindowGeometry(aboutWnd);
+#endif
             bringToFrontOnce(aboutWnd);
+#if defined(Q_OS_LINUX)
+            QTimer::singleShot(0, aboutWnd, [aboutWnd]{ restoreWindowGeometry(aboutWnd); });
+            cacheWindowGeometry(aboutWnd);
+#endif
         }
     });
 
     QObject::connect(toggleAction, &QAction::triggered, [winPtr=&win, toggleAction]{
         if (winPtr->isVisible()) {
+#if defined(Q_OS_LINUX)
+            cacheWindowGeometry(winPtr);
+#endif
             winPtr->hide();
             toggleAction->setText(QObject::tr("显示"));
         } else {
+#if defined(Q_OS_LINUX)
+            restoreWindowGeometry(winPtr);
+#endif
             winPtr->show();
             winPtr->raise();
             winPtr->activateWindow();
+#if defined(Q_OS_LINUX)
+            if (auto* wh = winPtr->windowHandle()) {
+                wh->setFlag(Qt::WindowStaysOnTopHint, true);
+            }
+            QTimer::singleShot(0, winPtr, [winPtr]{ restoreWindowGeometry(winPtr); });
+            cacheWindowGeometry(winPtr);
+#endif
             toggleAction->setText(QObject::tr("隐藏"));
         }
     });

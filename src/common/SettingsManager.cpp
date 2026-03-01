@@ -318,6 +318,8 @@ void SettingsManager::bootstrap(const QString& appDir)
         candidateSources << bundledModels;
 #if defined(Q_OS_MACOS)
         candidateSources << QDir(appDir).filePath(QStringLiteral("../Resources/models"));
+    #elif defined(Q_OS_LINUX)
+        candidateSources << QDir(appDir).filePath(QStringLiteral("../share/AmaiGirl/res/models"));
 #endif
         candidateSources << legacyModels;
 

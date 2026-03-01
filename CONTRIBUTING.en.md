@@ -24,7 +24,10 @@ AmaiGirl aims to become a cross-platform AI desktop assistant. The current imple
 
 #### Linux
 
-- TBD
+- Recommended environment: Wayland session (X11 can be used as fallback backend)
+- Build tools: CMake + Ninja + GCC/Clang
+- Qt: Qt 6 (Core / Gui / Widgets / OpenGL / OpenGLWidgets / Network / Multimedia)
+- Optional packaging tools (AppImage): `linuxdeploy`, `appimagetool`
 
 ### 2. **Live2D SDK (Important, must be downloaded manually)**
 
@@ -84,17 +87,75 @@ cmake --build build-release -j
 
 #### Linux
 
-- TBD
+- Standard build:
+
+```bash
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+./build/AmaiGirl
+```
+
+- AppImage packaging:
+
+```bash
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build --target package_appimage -j
+./build/AmaiGirl-x86_64.AppImage
+```
+
+- Portable/CI recommendation: avoid machine-specific paths; use `PATH` discovery first. If needed, override via CMake variables:
+   - `AMAIGIRL_LINUXDEPLOY_EXECUTABLE`
+   - `AMAIGIRL_APPIMAGETOOL_EXECUTABLE`
+   - `AMAIGIRL_QMAKE_EXECUTABLE`
+
+Example:
+
+```bash
+cmake -S . -B build -G Ninja \
+   -DAMAIGIRL_LINUXDEPLOY_EXECUTABLE=/opt/tools/linuxdeploy-x86_64.AppImage \
+   -DAMAIGIRL_APPIMAGETOOL_EXECUTABLE=/opt/tools/appimagetool-x86_64.AppImage \
+   -DAMAIGIRL_QMAKE_EXECUTABLE=/opt/Qt/6.9.3/gcc_64/bin/qmake6
+```
 
 ### 4. Coding & Commit Guidelines
 
-- Develop on the `dev` branch, or create your feature branch from `dev` (e.g. `feature/xxx`)
+- Do not develop directly on `dev`; branch from `dev` into feature branches: `feat/xxx` (for example `feat/windows/audio`, `feat/model-sync`)
 - Avoid committing development work directly on `main`
 - Keep changes focused and minimal
 - Avoid mixing unrelated refactors in one PR
 - Follow existing project style (naming, formatting, file layout)
+- Cross-platform macro rules:
+   - Windows: only `#if defined(Q_OS_WIN32)` / `#elif defined(Q_OS_WIN32)`
+   - Linux: only `#if defined(Q_OS_LINUX)` / `#elif defined(Q_OS_LINUX)`
+   - macOS: only `#if defined(Q_OS_MACOS)` / `#elif defined(Q_OS_MACOS)`
+   - Globally disallow direct platform checks via `#ifdef` / `#ifndef`
 - Sync i18n (`res/i18n/*.ts`) when UI texts are changed
 - Update `NOTICE` / `THIRD_PARTY_LICENSES.md` / `THIRD_PARTY_LICENSES.en.md` when distribution/license-related content changes
+
+Run checks locally before pushing:
+
+```bash
+python3 scripts/check_platform_macro_style.py --root src --platform windows
+python3 scripts/check_platform_macro_style.py --root src --platform linux
+python3 scripts/check_platform_macro_style.py --root src --platform macos
+python3 scripts/check_platform_macro_style.py --root src --platform all
+```
+
+CI policy:
+
+- All `feat/*` branches run macro-style checks
+- `feat/windows*` branches run Windows macro checks
+- `feat/linux*` branches run Linux macro checks
+- `feat/macos*` branches run macOS macro checks
+- Other `feat/xxx` branches (cross-platform features) run `--platform all`
+- PRs targeting `dev` must come from `feat/*`
+- PRs from `feat/windows*` / `feat/linux*` / `feat/macos*` to `dev` also run a "diff scope guard": C/C++ changes must stay inside the corresponding platform macro-guarded regions to avoid accidental shared-code edits
+- If exceptions are needed, add path-glob entries (one per line) to `.github/platform-diff-allowlist.txt` for the platform branch diff-scope guard
+
+Recommended repository protection settings:
+
+- Block direct pushes to `dev`
+- Require pull requests and passing CI checks before merging into `dev`
 
 ### 5. Pull Request Checklist
 

@@ -503,6 +503,11 @@ ChatWindow::ChatWindow(QWidget* parent)
     : QMainWindow(parent), d(new Impl)
 {
     setWindowTitle(tr("聊天"));
+#if defined(Q_OS_LINUX)
+    setWindowFlag(Qt::Window, true);
+    setWindowFlag(Qt::CustomizeWindowHint, false);
+    setWindowFlag(Qt::WindowMaximizeButtonHint, false);
+#endif
     resize(520, 640);
 
     auto* central = new QWidget(this);

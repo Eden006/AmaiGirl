@@ -24,7 +24,10 @@
 
 #### Linux
 
-- TBD
+- 建议环境：Wayland 会话（X11 可作为回退后端）
+- 构建工具：CMake + Ninja + GCC/Clang
+- Qt：Qt 6（Core / Gui / Widgets / OpenGL / OpenGLWidgets / Network / Multimedia）
+- 可选打包工具（AppImage）：`linuxdeploy`、`appimagetool`
 
 ### 2. **Live2D SDK（重要，必须自行下载）**
 
@@ -84,17 +87,75 @@ cmake --build build-release -j
 
 #### Linux
 
-- TBD
+- 常规构建：
+
+```bash
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+./build/AmaiGirl
+```
+
+- AppImage 打包：
+
+```bash
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build --target package_appimage -j
+./build/AmaiGirl-x86_64.AppImage
+```
+
+- 跨环境/CI 推荐：避免写死本地路径，优先通过 `PATH` 找工具；必要时使用以下 CMake 变量覆盖：
+   - `AMAIGIRL_LINUXDEPLOY_EXECUTABLE`
+   - `AMAIGIRL_APPIMAGETOOL_EXECUTABLE`
+   - `AMAIGIRL_QMAKE_EXECUTABLE`
+
+示例：
+
+```bash
+cmake -S . -B build -G Ninja \
+   -DAMAIGIRL_LINUXDEPLOY_EXECUTABLE=/opt/tools/linuxdeploy-x86_64.AppImage \
+   -DAMAIGIRL_APPIMAGETOOL_EXECUTABLE=/opt/tools/appimagetool-x86_64.AppImage \
+   -DAMAIGIRL_QMAKE_EXECUTABLE=/opt/Qt/6.9.3/gcc_64/bin/qmake6
+```
 
 ### 4. 代码与提交规范
 
-- 请在 `dev` 分支上开发，或从 `dev` 分支创建功能分支（例如 `feature/xxx`）
+- 不要直接在 `dev` 上开发；请从 `dev` 派生功能分支进行开发：`feat/xxx`（例如 `feat/windows/audio`、`feat/model-sync`）
 - 不建议直接在 `main` 分支上进行开发提交
 - 尽量保持改动聚焦、最小化
 - 不要在同一 PR 中混入无关重构
 - 保持现有代码风格（命名、缩进、文件组织）
+- 跨平台宏统一规范：
+   - Windows：仅允许 `#if defined(Q_OS_WIN32)` / `#elif defined(Q_OS_WIN32)`
+   - Linux：仅允许 `#if defined(Q_OS_LINUX)` / `#elif defined(Q_OS_LINUX)`
+   - macOS：仅允许 `#if defined(Q_OS_MACOS)` / `#elif defined(Q_OS_MACOS)`
+   - 统一禁止：`#ifdef` / `#ifndef` 直接判断平台宏
 - 对 UI 文案改动，请同步 i18n（`res/i18n/*.ts`）
 - 涉及许可证与分发内容，请同步更新 `NOTICE` / `THIRD_PARTY_LICENSES.md` / `THIRD_PARTY_LICENSES.en.md`
+
+可在本地执行以下命令进行检查：
+
+```bash
+python3 scripts/check_platform_macro_style.py --root src --platform windows
+python3 scripts/check_platform_macro_style.py --root src --platform linux
+python3 scripts/check_platform_macro_style.py --root src --platform macos
+python3 scripts/check_platform_macro_style.py --root src --platform all
+```
+
+CI 规则：
+
+- 所有 `feat/*` 分支都会执行宏规范检查
+- `feat/windows*` 分支自动执行 Windows 宏规范检查
+- `feat/linux*` 分支自动执行 Linux 宏规范检查
+- `feat/macos*` 分支自动执行 macOS 宏规范检查
+- 其他 `feat/xxx`（全平台特性）自动执行 `--platform all` 全量检查
+- 目标分支为 `dev` 的 PR，来源分支必须是 `feat/*`
+- 对 `feat/windows*` / `feat/linux*` / `feat/macos*` 到 `dev` 的 PR，会额外执行“改动范围守卫”：C/C++ 改动必须落在对应平台宏保护块内，避免误改共享代码
+- 若确需例外文件，可在 `.github/platform-diff-allowlist.txt` 中按行添加路径 glob 白名单（仅用于平台分支改动范围守卫）
+
+推荐在仓库设置中开启分支保护：
+
+- 禁止直接 push 到 `dev`
+- 要求 PR 合并并通过 CI 检查后才能进入 `dev`
 
 ### 5. Pull Request 建议
 

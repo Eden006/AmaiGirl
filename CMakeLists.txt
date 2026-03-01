@@ -1,12 +1,203 @@
 cmake_minimum_required(VERSION 3.21)
 project(AmaiGirl LANGUAGES CXX)
 
+option(AMAIGIRL_ENABLE_APPIMAGE "Enable Linux AppImage packaging target" ON)
+option(AMAIGIRL_APPIMAGE_CLEAN "Clean AppDir before packaging AppImage" ON)
+set(AMAIGIRL_LINUXDEPLOY_EXECUTABLE "" CACHE FILEPATH "Optional path override for linuxdeploy executable")
+set(AMAIGIRL_APPIMAGETOOL_EXECUTABLE "" CACHE FILEPATH "Optional path override for appimagetool executable")
+set(AMAIGIRL_QMAKE_EXECUTABLE "" CACHE FILEPATH "Optional path override for qmake/qmake6 executable")
+
 # Ensure minimum macOS version for deployment (downward compatibility)
 if(APPLE)
     # Set globally so compilers encode the correct LC_BUILD_VERSION minOS
     set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0" CACHE STRING "Minimum macOS version to target" FORCE)
     # Build a universal binary on macOS (Intel + Apple Silicon)
     set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "Build architectures for macOS" FORCE)
+endif()
+
+# Linux AppImage packaging (optional)
+if(UNIX AND NOT APPLE AND AMAIGIRL_ENABLE_APPIMAGE)
+    set(_APPIMAGE_ARCH "x86_64")
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)$")
+        set(_APPIMAGE_ARCH "aarch64")
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64)$")
+        set(_APPIMAGE_ARCH "x86_64")
+    else()
+        set(_APPIMAGE_ARCH "${CMAKE_SYSTEM_PROCESSOR}")
+    endif()
+
+    if(AMAIGIRL_LINUXDEPLOY_EXECUTABLE)
+        set(LINUXDEPLOY_EXECUTABLE "${AMAIGIRL_LINUXDEPLOY_EXECUTABLE}")
+    else()
+        find_program(LINUXDEPLOY_EXECUTABLE
+            NAMES
+                linuxdeploy
+                linuxdeploy.AppImage
+                linuxdeploy-x86_64.AppImage
+                linuxdeploy-aarch64.AppImage
+        )
+    endif()
+
+    if(AMAIGIRL_APPIMAGETOOL_EXECUTABLE)
+        set(APPIMAGETOOL_EXECUTABLE "${AMAIGIRL_APPIMAGETOOL_EXECUTABLE}")
+    else()
+        find_program(APPIMAGETOOL_EXECUTABLE
+            NAMES
+                appimagetool
+                appimagetool.AppImage
+                appimagetool-x86_64.AppImage
+                appimagetool-aarch64.AppImage
+        )
+    endif()
+
+    if(LINUXDEPLOY_EXECUTABLE AND APPIMAGETOOL_EXECUTABLE)
+        set(AMAIGIRL_APPDIR "${CMAKE_BINARY_DIR}/AppDir")
+        set(AMAIGIRL_DESKTOP_FILE "${CMAKE_SOURCE_DIR}/cmake/amaigirl.desktop")
+        set(AMAIGIRL_ICON_FILE "${CMAKE_SOURCE_DIR}/res/icons/app-icon.png")
+
+        set(_AMAIGIRL_APPIMAGE_CLEAN_CMD "")
+        if(AMAIGIRL_APPIMAGE_CLEAN)
+            set(_AMAIGIRL_APPIMAGE_CLEAN_CMD
+                COMMAND ${CMAKE_COMMAND} -E rm -rf "${AMAIGIRL_APPDIR}"
+            )
+        endif()
+
+        if(NOT AMAIGIRL_QMAKE_EXECUTABLE)
+            set(_AMAIGIRL_QT_BIN_HINTS "")
+            foreach(_qt_bin_candidate
+                "$ENV{QTDIR}/bin"
+                "$ENV{QT_DIR}/bin"
+                "$ENV{QT_ROOT_DIR}/bin"
+                "$ENV{QT_ROOT}/bin")
+                if(_qt_bin_candidate AND EXISTS "${_qt_bin_candidate}")
+                    list(APPEND _AMAIGIRL_QT_BIN_HINTS "${_qt_bin_candidate}")
+                endif()
+            endforeach()
+
+            if(Qt6Core_DIR)
+                get_filename_component(_qt6core_dir_real "${Qt6Core_DIR}" REALPATH)
+                get_filename_component(_qt6core_cmake_dir "${_qt6core_dir_real}" DIRECTORY)
+                get_filename_component(_qt6_lib_dir "${_qt6core_cmake_dir}" DIRECTORY)
+                get_filename_component(_qt6_root_dir "${_qt6_lib_dir}" DIRECTORY)
+                if(EXISTS "${_qt6_root_dir}/bin")
+                    list(APPEND _AMAIGIRL_QT_BIN_HINTS "${_qt6_root_dir}/bin")
+                endif()
+            endif()
+
+            find_program(AMAIGIRL_QMAKE_EXECUTABLE
+                NAMES qmake6 qmake
+                HINTS ${_AMAIGIRL_QT_BIN_HINTS}
+            )
+        endif()
+
+        if(AMAIGIRL_QMAKE_EXECUTABLE)
+            set(_AMAIGIRL_LINUXDEPLOY_ENV_QT
+                COMMAND ${CMAKE_COMMAND} -E env ARCH=${_APPIMAGE_ARCH} QMAKE=${AMAIGIRL_QMAKE_EXECUTABLE}
+            )
+
+            execute_process(
+                COMMAND "${AMAIGIRL_QMAKE_EXECUTABLE}" -query QT_INSTALL_PLUGINS
+                OUTPUT_VARIABLE AMAIGIRL_QT_PLUGINS_DIR
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+            )
+            execute_process(
+                COMMAND "${AMAIGIRL_QMAKE_EXECUTABLE}" -query QT_INSTALL_LIBS
+                OUTPUT_VARIABLE AMAIGIRL_QT_LIBS_DIR
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+            )
+        else()
+            set(_AMAIGIRL_LINUXDEPLOY_ENV_QT
+                COMMAND ${CMAKE_COMMAND} -E env ARCH=${_APPIMAGE_ARCH}
+            )
+            message(WARNING "qmake not found; linuxdeploy --plugin qt may fail")
+        endif()
+
+        set(_AMAIGIRL_COPY_WAYLAND_CMDS "")
+        if(AMAIGIRL_QT_PLUGINS_DIR AND EXISTS "${AMAIGIRL_QT_PLUGINS_DIR}")
+            set(_AMAIGIRL_QT_PLATFORMS_DIR "${AMAIGIRL_QT_PLUGINS_DIR}/platforms")
+            if(EXISTS "${_AMAIGIRL_QT_PLATFORMS_DIR}/libqwayland-generic.so")
+                list(APPEND _AMAIGIRL_COPY_WAYLAND_CMDS
+                    COMMAND ${CMAKE_COMMAND} -E make_directory "${AMAIGIRL_APPDIR}/usr/plugins/platforms"
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_AMAIGIRL_QT_PLATFORMS_DIR}/libqwayland-generic.so" "${AMAIGIRL_APPDIR}/usr/plugins/platforms/libqwayland-generic.so"
+                )
+            endif()
+            if(EXISTS "${_AMAIGIRL_QT_PLATFORMS_DIR}/libqwayland-egl.so")
+                list(APPEND _AMAIGIRL_COPY_WAYLAND_CMDS
+                    COMMAND ${CMAKE_COMMAND} -E make_directory "${AMAIGIRL_APPDIR}/usr/plugins/platforms"
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_AMAIGIRL_QT_PLATFORMS_DIR}/libqwayland-egl.so" "${AMAIGIRL_APPDIR}/usr/plugins/platforms/libqwayland-egl.so"
+                )
+            endif()
+
+            foreach(_wayland_subdir
+                wayland-shell-integration
+                wayland-decoration-client
+                wayland-graphics-integration-client
+                wayland-graphics-integration-server)
+                if(EXISTS "${AMAIGIRL_QT_PLUGINS_DIR}/${_wayland_subdir}")
+                    list(APPEND _AMAIGIRL_COPY_WAYLAND_CMDS
+                        COMMAND ${CMAKE_COMMAND} -E copy_directory "${AMAIGIRL_QT_PLUGINS_DIR}/${_wayland_subdir}" "${AMAIGIRL_APPDIR}/usr/plugins/${_wayland_subdir}"
+                    )
+                endif()
+            endforeach()
+        else()
+            message(WARNING "Qt plugins directory not found; cannot prebundle Wayland plugins into AppImage")
+        endif()
+
+        if(AMAIGIRL_QT_LIBS_DIR AND EXISTS "${AMAIGIRL_QT_LIBS_DIR}")
+            list(APPEND _AMAIGIRL_COPY_WAYLAND_CMDS
+                COMMAND ${CMAKE_COMMAND} -E make_directory "${AMAIGIRL_APPDIR}/usr/lib"
+            )
+            foreach(_wayland_lib
+                libQt6WaylandClient.so
+                libQt6WaylandClient.so.6
+                libQt6WaylandEglClientHwIntegration.so
+                libQt6WaylandEglClientHwIntegration.so.6)
+                if(EXISTS "${AMAIGIRL_QT_LIBS_DIR}/${_wayland_lib}")
+                    list(APPEND _AMAIGIRL_COPY_WAYLAND_CMDS
+                        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${AMAIGIRL_QT_LIBS_DIR}/${_wayland_lib}" "${AMAIGIRL_APPDIR}/usr/lib/${_wayland_lib}"
+                    )
+                endif()
+            endforeach()
+        else()
+            message(WARNING "Qt libs directory not found; cannot prebundle Qt Wayland runtime libs into AppImage")
+        endif()
+
+        add_custom_target(package_appimage
+            ${_AMAIGIRL_APPIMAGE_CLEAN_CMD}
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${AMAIGIRL_APPDIR}/usr/bin"
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${AMAIGIRL_APPDIR}/usr/share/icons/hicolor/256x256/apps"
+            COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:AmaiGirl>" "${AMAIGIRL_APPDIR}/usr/bin/AmaiGirl"
+            COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/res" "${AMAIGIRL_APPDIR}/usr/bin/res"
+            COMMAND ${CMAKE_COMMAND} -E copy "${AMAIGIRL_DESKTOP_FILE}" "${AMAIGIRL_APPDIR}/amaigirl.desktop"
+            COMMAND ${CMAKE_COMMAND} -E copy "${AMAIGIRL_ICON_FILE}" "${AMAIGIRL_APPDIR}/amaigirl.png"
+            COMMAND ${CMAKE_COMMAND} -E copy "${AMAIGIRL_ICON_FILE}" "${AMAIGIRL_APPDIR}/.DirIcon"
+            COMMAND ${CMAKE_COMMAND} -E copy "${AMAIGIRL_ICON_FILE}" "${AMAIGIRL_APPDIR}/usr/share/icons/hicolor/256x256/apps/amaigirl.png"
+            ${_AMAIGIRL_LINUXDEPLOY_ENV_QT}
+                    "${LINUXDEPLOY_EXECUTABLE}"
+                    --appdir "${AMAIGIRL_APPDIR}"
+                    --desktop-file "${AMAIGIRL_APPDIR}/amaigirl.desktop"
+                    --icon-file "${AMAIGIRL_APPDIR}/amaigirl.png"
+                    --executable "${AMAIGIRL_APPDIR}/usr/bin/AmaiGirl"
+                    --plugin qt
+                ${_AMAIGIRL_COPY_WAYLAND_CMDS}
+            COMMAND ${CMAKE_COMMAND} -E copy "${AMAIGIRL_DESKTOP_FILE}" "${AMAIGIRL_APPDIR}/amaigirl.desktop"
+            COMMAND ${CMAKE_COMMAND} -E copy "${AMAIGIRL_ICON_FILE}" "${AMAIGIRL_APPDIR}/amaigirl.png"
+            COMMAND ${CMAKE_COMMAND} -E copy "${AMAIGIRL_ICON_FILE}" "${AMAIGIRL_APPDIR}/.DirIcon"
+            COMMAND ${CMAKE_COMMAND} -E copy "${AMAIGIRL_ICON_FILE}" "${AMAIGIRL_APPDIR}/usr/share/icons/hicolor/256x256/apps/amaigirl.png"
+            COMMAND ${CMAKE_COMMAND} -E env ARCH=${_APPIMAGE_ARCH}
+                    "${LINUXDEPLOY_EXECUTABLE}"
+                    --appdir "${AMAIGIRL_APPDIR}"
+                    --output appimage
+            DEPENDS AmaiGirl
+            WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+            COMMENT "Packaging AppImage via linuxdeploy"
+            VERBATIM
+        )
+
+        message(STATUS "Linux AppImage target enabled: package_appimage")
+    else()
+        message(STATUS "AppImage tools not found (need linuxdeploy + appimagetool), skip package_appimage target")
+    endif()
 endif()
 
 # C++ standard

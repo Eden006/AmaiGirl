@@ -25,7 +25,8 @@ float clampf(float v, float lo, float hi);
 float easingSine(float rate);
 
 // Resource path helpers.
-// On macOS app bundle, prefer: <App>.app/Contents/Resources
-// Fallback: <appDir>/res (current dev layout)
+// - macOS bundle: <App>.app/Contents/Resources
+// - Linux install/AppImage: prefer APPDIR and ../share/AmaiGirl/res when available
+// - Fallback: <appDir>/res (dev/local layout)
 QString appResourceRootPath();
 QString appResourcePath(const QString& relativePath);
