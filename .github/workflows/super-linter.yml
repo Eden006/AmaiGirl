@@ -23,9 +23,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Validate PR head branch for dev
+        env:
+          HEAD_BRANCH: ${{ github.head_ref }}
         run: |
           set -euo pipefail
-          HEAD_BRANCH="${{ github.head_ref }}"
           case "$HEAD_BRANCH" in
             feat/*)
               echo "Branch policy passed: $HEAD_BRANCH"
@@ -47,12 +48,16 @@ jobs:
 
       - name: Resolve target platform
         id: platform
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          HEAD_BRANCH: ${{ github.head_ref }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BRANCH="${{ github.head_ref }}"
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            BRANCH="$HEAD_BRANCH"
           else
-            BRANCH="${{ github.ref_name }}"
+            BRANCH="$REF_NAME"
           fi
 
           if [[ "$BRANCH" == feat/windows* ]]; then
