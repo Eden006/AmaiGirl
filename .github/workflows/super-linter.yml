@@ -8,9 +8,9 @@ name: Lint Code Base
 
 on:
   push:
-    branches: [ "main", "dev" ]
+    branches: [ "main", "dev", "feat/*", "feat/**" ]
   pull_request:
-    branches: [ "main", "dev" ]
+    branches: [ "main", "dev", "feat/*", "feat/**" ]
 
 permissions:
   contents: read
@@ -18,6 +18,64 @@ permissions:
   statuses: write
 
 jobs:
+  enforce-platform-branch-policy:
+    if: github.event_name == 'pull_request' && github.base_ref == 'dev'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR head branch for dev
+        run: |
+          set -euo pipefail
+          HEAD_BRANCH="${{ github.head_ref }}"
+          case "$HEAD_BRANCH" in
+            feat/*)
+              echo "Branch policy passed: $HEAD_BRANCH"
+              ;;
+            *)
+              echo "PR to dev must come from feature branches:" >&2
+              echo "  - feat/xxx" >&2
+              echo "Current head branch: $HEAD_BRANCH" >&2
+              exit 1
+              ;;
+          esac
+
+  lint-platform-macro-style:
+    if: >-
+      (github.event_name == 'push' && (
+        startsWith(github.ref_name, 'feat/')
+      )) ||
+      (github.event_name == 'pull_request' && (
+        startsWith(github.head_ref, 'feat/')
+      ))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Resolve target platform
+        id: platform
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BRANCH="${{ github.head_ref }}"
+          else
+            BRANCH="${{ github.ref_name }}"
+          fi
+
+          if [[ "$BRANCH" == feat/windows* ]]; then
+            PLATFORM="windows"
+          elif [[ "$BRANCH" == feat/linux* ]]; then
+            PLATFORM="linux"
+          elif [[ "$BRANCH" == feat/macos* ]]; then
+            PLATFORM="macos"
+          else
+            PLATFORM="all"
+          fi
+          echo "platform=$PLATFORM" >> "$GITHUB_OUTPUT"
+          echo "Resolved platform=$PLATFORM from branch=$BRANCH"
+
+      - name: Enforce platform macro style
+        run: python3 scripts/check_platform_macro_style.py --root src --platform "${{ steps.platform.outputs.platform }}"
+
   lint-code:
     runs-on: ubuntu-latest
     steps:

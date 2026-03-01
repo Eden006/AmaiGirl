@@ -119,13 +119,41 @@ cmake -S . -B build -G Ninja \
 
 ### 4. Coding & Commit Guidelines
 
-- Develop on the `dev` branch, or create your feature branch from `dev` (e.g. `feature/xxx`)
+- Do not develop directly on `dev`; branch from `dev` into feature branches: `feat/xxx` (for example `feat/windows/audio`, `feat/model-sync`)
 - Avoid committing development work directly on `main`
 - Keep changes focused and minimal
 - Avoid mixing unrelated refactors in one PR
 - Follow existing project style (naming, formatting, file layout)
+- Cross-platform macro rules:
+   - Windows: only `#if defined(Q_OS_WIN32)` / `#elif defined(Q_OS_WIN32)`
+   - Linux: only `#if defined(Q_OS_LINUX)` / `#elif defined(Q_OS_LINUX)`
+   - macOS: only `#if defined(Q_OS_MACOS)` / `#elif defined(Q_OS_MACOS)`
+   - Globally disallow direct platform checks via `#ifdef` / `#ifndef`
 - Sync i18n (`res/i18n/*.ts`) when UI texts are changed
 - Update `NOTICE` / `THIRD_PARTY_LICENSES.md` / `THIRD_PARTY_LICENSES.en.md` when distribution/license-related content changes
+
+Run checks locally before pushing:
+
+```bash
+python3 scripts/check_platform_macro_style.py --root src --platform windows
+python3 scripts/check_platform_macro_style.py --root src --platform linux
+python3 scripts/check_platform_macro_style.py --root src --platform macos
+python3 scripts/check_platform_macro_style.py --root src --platform all
+```
+
+CI policy:
+
+- All `feat/*` branches run macro-style checks
+- `feat/windows*` branches run Windows macro checks
+- `feat/linux*` branches run Linux macro checks
+- `feat/macos*` branches run macOS macro checks
+- Other `feat/xxx` branches (cross-platform features) run `--platform all`
+- PRs targeting `dev` must come from `feat/*`
+
+Recommended repository protection settings:
+
+- Block direct pushes to `dev`
+- Require pull requests and passing CI checks before merging into `dev`
 
 ### 5. Pull Request Checklist
 

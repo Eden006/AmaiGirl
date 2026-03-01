@@ -119,13 +119,41 @@ cmake -S . -B build -G Ninja \
 
 ### 4. 代码与提交规范
 
-- 请在 `dev` 分支上开发，或从 `dev` 分支创建功能分支（例如 `feature/xxx`）
+- 不要直接在 `dev` 上开发；请从 `dev` 派生功能分支进行开发：`feat/xxx`（例如 `feat/windows/audio`、`feat/model-sync`）
 - 不建议直接在 `main` 分支上进行开发提交
 - 尽量保持改动聚焦、最小化
 - 不要在同一 PR 中混入无关重构
 - 保持现有代码风格（命名、缩进、文件组织）
+- 跨平台宏统一规范：
+   - Windows：仅允许 `#if defined(Q_OS_WIN32)` / `#elif defined(Q_OS_WIN32)`
+   - Linux：仅允许 `#if defined(Q_OS_LINUX)` / `#elif defined(Q_OS_LINUX)`
+   - macOS：仅允许 `#if defined(Q_OS_MACOS)` / `#elif defined(Q_OS_MACOS)`
+   - 统一禁止：`#ifdef` / `#ifndef` 直接判断平台宏
 - 对 UI 文案改动，请同步 i18n（`res/i18n/*.ts`）
 - 涉及许可证与分发内容，请同步更新 `NOTICE` / `THIRD_PARTY_LICENSES.md` / `THIRD_PARTY_LICENSES.en.md`
+
+可在本地执行以下命令进行检查：
+
+```bash
+python3 scripts/check_platform_macro_style.py --root src --platform windows
+python3 scripts/check_platform_macro_style.py --root src --platform linux
+python3 scripts/check_platform_macro_style.py --root src --platform macos
+python3 scripts/check_platform_macro_style.py --root src --platform all
+```
+
+CI 规则：
+
+- 所有 `feat/*` 分支都会执行宏规范检查
+- `feat/windows*` 分支自动执行 Windows 宏规范检查
+- `feat/linux*` 分支自动执行 Linux 宏规范检查
+- `feat/macos*` 分支自动执行 macOS 宏规范检查
+- 其他 `feat/xxx`（全平台特性）自动执行 `--platform all` 全量检查
+- 目标分支为 `dev` 的 PR，来源分支必须是 `feat/*`
+
+推荐在仓库设置中开启分支保护：
+
+- 禁止直接 push 到 `dev`
+- 要求 PR 合并并通过 CI 检查后才能进入 `dev`
 
 ### 5. Pull Request 建议
 
